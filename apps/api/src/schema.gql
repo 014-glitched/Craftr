@@ -1,0 +1,16 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Query {
+  """Returns the currently authenticated user"""
+  me: UserModel!
+}
+
+type UserModel {
+  email: String!
+  emailVerified: Boolean!
+  id: ID!
+  image: String
+  name: String!
+}

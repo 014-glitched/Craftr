@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: craftr
+      POSTGRES_PASSWORD: craftr
+      POSTGRES_DB: craftr
+    volumes:
+      - craftr_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U craftr -d craftr"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - craftr_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.14
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: craftr_dev_master_key
+    volumes:
+      - craftr_meili:/meili_data
+
+  mailpit:
+    image: axllent/mailpit:v1.22
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  craftr_pg:
+  craftr_redis:
+  craftr_meili:

@@ -1,8 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/.pnp
+node_modules
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -14,11 +14,15 @@
 /coverage
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
-# production
-/build
+# nest / build
+dist/
+build/
+
+# turbo
+.turbo
 
 # misc
 .DS_Store
@@ -30,8 +34,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +45,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma
+packages/database/prisma/*.db
+packages/database/prisma/*.db-journal
+
+# local documentation (not pushed to GitHub)
+documents/
