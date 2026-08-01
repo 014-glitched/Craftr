@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { AppProviders } from "@/app/app/providers";
 import { LoginForm } from "@/features/auth/components/login-form";
 
 export const metadata: Metadata = {
@@ -6,5 +8,11 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  return <LoginForm />;
+  return (
+    <AppProviders>
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
+    </AppProviders>
+  );
 }

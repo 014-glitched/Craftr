@@ -1,29 +1,67 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 import { CircleNotch, WarningCircle } from "@phosphor-icons/react";
 import { signIn } from "@/lib/auth-client";
+import { useInviteGate } from "@/features/auth/hooks/use-invite-gate";
 import {
   hasFieldErrors,
   validateLoginInput,
   type FieldErrors,
 } from "@/lib/auth-validation";
+import { emailsMatch, safeNextPath } from "@/lib/safe-next";
 import { AuthShell } from "./auth-shell";
 import { AuthField } from "./auth-field";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
+  const signupHref =
+    nextPath !== "/app"
+      ? `/signup?next=${encodeURIComponent(nextPath)}`
+      : "/signup";
+
+  const {
+    token: inviteToken,
+    inviteEmail,
+    organizationName,
+    loading: inviteLoading,
+    invalid: inviteInvalid,
+  } = useInviteGate(nextPath);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  useEffect(() => {
+    if (inviteEmail) setEmail(inviteEmail);
+  }, [inviteEmail]);
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
+
+    if (inviteToken) {
+      if (inviteInvalid || !inviteEmail) {
+        setFormError("This invitation is invalid or has expired.");
+        return;
+      }
+      if (!emailsMatch(email, inviteEmail)) {
+        setFormError(
+          `This invitation was sent to ${inviteEmail}. Sign in with that email to continue.`,
+        );
+        setFieldErrors((prev) => ({
+          ...prev,
+          email: "Use the invited email address.",
+        }));
+        return;
+      }
+    }
 
     const errors = validateLoginInput({ email, password });
     setFieldErrors(errors);
@@ -31,33 +69,70 @@ export function LoginForm() {
 
     setPending(true);
 
-    const { error: authError } = await signIn.email({
-      email: email.trim(),
-      password,
-    });
+    try {
+      const { error: authError } = await signIn.email({
+        email: email.trim(),
+        password,
+      });
 
-    setPending(false);
+      if (authError) {
+        setFormError(
+          authError.message ||
+            "Unable to sign in. Check your email and password.",
+        );
+        return;
+      }
 
-    if (authError) {
+      router.push(nextPath);
+      router.refresh();
+    } catch {
       setFormError(
-        authError.message || "Unable to sign in. Check your email and password.",
+        "Unable to reach the server. Make sure the API is running on port 4000.",
       );
-      return;
+    } finally {
+      setPending(false);
     }
+  }
 
-    router.push("/app");
-    router.refresh();
+  if (inviteToken && inviteLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-ink-muted">
+        <CircleNotch weight="bold" className="size-5 animate-spin text-brand" />
+      </div>
+    );
+  }
+
+  if (inviteToken && inviteInvalid) {
+    return (
+      <AuthShell
+        title="Invitation unavailable"
+        subtitle="This invite link is invalid, expired, or already used."
+        footer={
+          <Link href="/login" className="font-medium text-brand hover:underline">
+            Sign in normally
+          </Link>
+        }
+      >
+        <p className="text-sm text-ink-muted">
+          Ask your teammate to send a new invitation.
+        </p>
+      </AuthShell>
+    );
   }
 
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your workspace — work, docs, and signal in one place."
+      subtitle={
+        inviteEmail
+          ? `Sign in as ${inviteEmail}${organizationName ? ` to join ${organizationName}` : ""}.`
+          : "Sign in to your workspace — work, docs, and signal in one place."
+      }
       footer={
         <>
           New to Craftr?{" "}
           <Link
-            href="/signup"
+            href={signupHref}
             className="font-medium text-brand underline-offset-4 hover:underline"
           >
             Create an account
@@ -66,6 +141,13 @@ export function LoginForm() {
       }
     >
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        {inviteEmail ? (
+          <p className="rounded-[10px] border border-line bg-canvas px-3 py-2 text-xs text-ink-muted">
+            This invitation is locked to <strong>{inviteEmail}</strong>. You
+            must sign in with that address.
+          </p>
+        ) : null}
+
         <AuthField
           id="email"
           label="Work email"
@@ -74,8 +156,15 @@ export function LoginForm() {
           inputMode="email"
           placeholder="you@company.com"
           value={email}
+          readOnly={Boolean(inviteEmail)}
           error={fieldErrors.email}
+          hint={
+            inviteEmail
+              ? "Email is fixed to the invitation recipient."
+              : undefined
+          }
           onChange={(e) => {
+            if (inviteEmail) return;
             setEmail(e.target.value);
             if (fieldErrors.email) {
               setFieldErrors((prev) => ({ ...prev, email: undefined }));

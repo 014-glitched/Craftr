@@ -6,7 +6,10 @@ import { join } from "path";
 import type { Request, Response } from "express";
 import { AuthModule } from "./modules/auth/auth.module";
 import { HealthModule } from "./modules/health/health.module";
+import { OrganizationsModule } from "./modules/organizations/organizations.module";
+import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
 import { PrismaModule } from "./common/prisma/prisma.module";
+import { TenancyModule } from "./common/tenancy/tenancy.module";
 
 @Module({
   imports: [
@@ -15,6 +18,7 @@ import { PrismaModule } from "./common/prisma/prisma.module";
       envFilePath: [".env", "../../.env"],
     }),
     PrismaModule,
+    TenancyModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), "src/schema.gql"),
@@ -24,9 +28,18 @@ import { PrismaModule } from "./common/prisma/prisma.module";
         req,
         res,
       }),
+      formatError: (formattedError) => ({
+        message: formattedError.message,
+        path: formattedError.path,
+        extensions: {
+          code: formattedError.extensions?.code,
+        },
+      }),
     }),
     AuthModule,
     HealthModule,
+    OrganizationsModule,
+    WorkspacesModule,
   ],
 })
 export class AppModule {}
