@@ -2,9 +2,125 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AcceptInvitationPayload {
+  organization: OrganizationModel!
+  workspace: WorkspaceRefModel
+}
+
+input CreateInvitationInput {
+  email: String!
+  organizationId: ID!
+  role: MemberRole! = MEMBER
+  workspaceId: ID
+}
+
+input CreateOrganizationInput {
+  name: String!
+  slug: String
+}
+
+type CreateOrganizationPayload {
+  defaultWorkspace: WorkspaceRefModel!
+  organization: OrganizationModel!
+}
+
+input CreateWorkspaceInput {
+  name: String!
+  organizationId: ID!
+  slug: String
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type InvitationModel {
+  email: String!
+  expiresAt: DateTime!
+  id: ID!
+  role: MemberRole!
+  token: String!
+}
+
+type InvitationPreviewModel {
+  email: String!
+  emailMasked: String!
+  expiresAt: DateTime!
+  organizationName: String!
+  organizationSlug: String!
+  role: MemberRole!
+  workspaceName: String
+}
+
+"""Organization and workspace membership role"""
+enum MemberRole {
+  ADMIN
+  GUEST
+  MEMBER
+  OWNER
+}
+
+type Mutation {
+  acceptInvitation(token: String!): AcceptInvitationPayload!
+  createInvitation(input: CreateInvitationInput!): InvitationModel!
+  createOrganization(input: CreateOrganizationInput!): CreateOrganizationPayload!
+  createWorkspace(input: CreateWorkspaceInput!): WorkspaceModel!
+  removeOrganizationMember(input: RemoveOrganizationMemberInput!): Boolean!
+  updateOrganization(input: UpdateOrganizationInput!): OrganizationModel!
+  updateWorkspace(input: UpdateWorkspaceInput!): WorkspaceModel!
+}
+
+type OrganizationMemberModel {
+  id: ID!
+  joinedAt: DateTime!
+  role: MemberRole!
+  user: OrganizationMemberUserModel!
+}
+
+type OrganizationMemberUserModel {
+  email: String!
+  id: ID!
+  image: String
+  name: String!
+}
+
+type OrganizationModel {
+  createdAt: DateTime!
+  id: ID!
+  myRole: MemberRole
+  name: String!
+  slug: String!
+  updatedAt: DateTime!
+}
+
 type Query {
+  invitationPreview(token: String!): InvitationPreviewModel!
+
   """Returns the currently authenticated user"""
   me: UserModel!
+  myOrganizations: [OrganizationModel!]!
+  myWorkspaces(organizationId: String!): [WorkspaceModel!]!
+  organization(slug: String!): OrganizationModel!
+  organizationMembers(organizationId: String!): [OrganizationMemberModel!]!
+  workspace(orgSlug: String!, workspaceSlug: String!): WorkspaceModel!
+}
+
+input RemoveOrganizationMemberInput {
+  organizationId: ID!
+  userId: ID!
+}
+
+input UpdateOrganizationInput {
+  name: String
+  organizationId: ID!
+  slug: String
+}
+
+input UpdateWorkspaceInput {
+  name: String
+  slug: String
+  workspaceId: ID!
 }
 
 type UserModel {
@@ -13,4 +129,22 @@ type UserModel {
   id: ID!
   image: String
   name: String!
+}
+
+type WorkspaceModel {
+  createdAt: DateTime!
+  id: ID!
+  myRole: MemberRole
+  name: String!
+  orgSlug: String!
+  organizationId: ID!
+  slug: String!
+  updatedAt: DateTime!
+}
+
+type WorkspaceRefModel {
+  id: ID!
+  name: String!
+  orgSlug: String!
+  slug: String!
 }

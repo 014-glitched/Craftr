@@ -2,6 +2,15 @@
 
 Engineering collaboration platform — monorepo (`apps/web`, `apps/api`).
 
+## Phase 2 status
+
+Organizations & Workspaces (multi-tenant core):
+
+- Create org + default `"General"` workspace after signup (`/app/onboarding`)
+- Workspace URLs: `/app/[orgSlug]/[workspaceSlug]`
+- Org settings + invite links: `/app/[orgSlug]/settings`, `/invite/[token]`
+- Apollo Client + membership guards on the API
+
 ## Phase 1 status
 
 Foundation + Authentication:
@@ -38,6 +47,8 @@ pnpm dev
 - Sign in: http://localhost:3000/login  
 - Sign up: http://localhost:3000/signup  
 - App shell: http://localhost:3000/app  
+- Onboarding: http://localhost:3000/app/onboarding  
+- Workspace: http://localhost:3000/app/{orgSlug}/{workspaceSlug}  
 - GraphQL: http://localhost:4000/graphql  
 - Auth API: http://localhost:4000/api/auth/*  
 

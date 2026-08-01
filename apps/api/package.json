@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "nest start --watch --preserveWatchOutput",
     "build": "nest build",
+    "predev": "pnpm --filter @craftr/validation build",
+    "prebuild": "pnpm --filter @craftr/validation build",
     "start": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
@@ -12,6 +14,7 @@
     "@apollo/server": "^4.12.2",
     "@as-integrations/express5": "^1.1.2",
     "@craftr/database": "workspace:*",
+    "@craftr/validation": "workspace:*",
     "@nestjs/apollo": "^13.1.0",
     "@nestjs/common": "^11.1.3",
     "@nestjs/config": "^4.0.2",
@@ -19,9 +22,11 @@
     "@nestjs/graphql": "^13.1.0",
     "@nestjs/platform-express": "^11.1.3",
     "better-auth": "^1.2.12",
+    "express": "^5.1.0",
     "graphql": "^16.11.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.7",
