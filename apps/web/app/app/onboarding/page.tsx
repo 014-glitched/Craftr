@@ -20,8 +20,8 @@ export default function OnboardingPage() {
         Create your organization
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        This is your team&apos;s home in Craftr. We&apos;ll add a default
-        workspace called General automatically.
+        This is your company&apos;s home in Craftr. You can create workspaces
+        whenever you&apos;re ready — nothing is forced at signup.
       </p>
       <div className="mt-8 rounded-2xl border border-line bg-surface p-6">
         <CreateOrgForm />

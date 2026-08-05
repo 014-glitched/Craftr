@@ -21,7 +21,7 @@ export function CreateWorkspaceForm({
 }: {
   organizationId: string;
   orgSlug: string;
-  onCreated?: (ws: { slug: string; orgSlug: string }) => void;
+  onCreated?: (ws: { id: string; slug: string; orgSlug: string }) => void;
 }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -30,7 +30,10 @@ export function CreateWorkspaceForm({
   const [formError, setFormError] = useState<string | null>(null);
 
   const [createWorkspace, { loading }] =
-    useMutation<CreateWorkspaceMutation>(CREATE_WORKSPACE);
+    useMutation<CreateWorkspaceMutation>(CREATE_WORKSPACE, {
+      refetchQueries: ["MyWorkspaces"],
+      awaitRefetchQueries: true,
+    });
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -66,7 +69,11 @@ export function CreateWorkspaceForm({
       setName("");
       setSlug("");
       setSlugTouched(false);
-      onCreated?.({ slug: ws.slug, orgSlug: ws.orgSlug ?? orgSlug });
+      onCreated?.({
+        id: ws.id,
+        slug: ws.slug,
+        orgSlug: ws.orgSlug ?? orgSlug,
+      });
     } catch {
       setFormError("Unable to create workspace.");
     }

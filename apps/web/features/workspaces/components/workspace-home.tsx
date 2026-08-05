@@ -1,30 +1,39 @@
+"use client";
+
 import {
   ChatCircleDots,
   CheckSquare,
   FileText,
 } from "@phosphor-icons/react/dist/ssr";
+import { cn } from "@/lib/utils";
 
 const lanes = [
   {
     title: "Work",
-    subtitle: "Projects & tasks",
-    body: "Shipping lane — boards and assignees arrive in Phase 4.",
+    subtitle: "Projects and tasks",
+    body: "Boards and assignees arrive in Phase 4. This lane is where delivery lives.",
     color: "bg-lane-work",
+    tint: "from-lane-work/20 to-transparent",
     Icon: CheckSquare,
+    wide: true,
   },
   {
     title: "Context",
-    subtitle: "Docs & files",
-    body: "Decisions and specs live beside the work they describe.",
+    subtitle: "Docs and files",
+    body: "Decisions and specs stay beside the work they describe.",
     color: "bg-lane-docs",
+    tint: "from-lane-docs/20 to-transparent",
     Icon: FileText,
+    wide: false,
   },
   {
     title: "Signal",
-    subtitle: "Chat & alerts",
-    body: "Conversation and activity feed — coming after core work tools.",
+    subtitle: "Chat and alerts",
+    body: "Conversation and activity feed after core work tools ship.",
     color: "bg-lane-chat",
+    tint: "from-lane-chat/20 to-transparent",
     Icon: ChatCircleDots,
+    wide: false,
   },
 ] as const;
 
@@ -36,35 +45,70 @@ export function WorkspaceHome({
   orgName: string;
 }) {
   return (
-    <div className="animate-auth-rise mx-auto max-w-4xl">
-      <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-ink-faint uppercase">
-        {orgName} / {workspaceName}
-      </p>
-      <h1 className="mt-3 font-display text-4xl tracking-[-0.045em] text-ink">
-        Your workspace is ready.
-      </h1>
-      <p className="mt-3 max-w-xl text-ink-muted">
-        Everything in Craftr is organized into three lanes — so you always know
-        where work, context, and signal belong.
-      </p>
+    <div className="-mx-6 -my-6 animate-auth-rise md:-mx-10 md:-my-10">
+      <header className="relative overflow-hidden border-b border-line bg-surface px-6 py-10 md:px-10 md:py-12">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-lane-work/25 via-lane-docs/10 to-transparent"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 top-0 size-72 rounded-full bg-lane-work/15 blur-3xl"
+        />
+        <div className="relative">
+          <p className="text-sm text-ink-faint">
+            {orgName}
+            <span className="mx-2 text-line-strong">/</span>
+            {workspaceName}
+          </p>
+          <h1 className="mt-3 max-w-[14ch] font-display text-4xl tracking-[-0.05em] text-ink md:text-5xl lg:text-6xl">
+            {workspaceName}
+          </h1>
+          <p className="mt-4 max-w-[48ch] text-ink-muted">
+            Three lanes keep delivery, docs, and conversation from collapsing
+            into one feed.
+          </p>
+        </div>
+      </header>
 
-      <div className="mt-10 grid gap-3 sm:grid-cols-3">
-        {lanes.map(({ title, subtitle, body, color, Icon }) => (
+      <div className="grid gap-3 p-6 md:grid-cols-2 md:p-10">
+        {lanes.map(({ title, subtitle, body, color, tint, Icon, wide }, i) => (
           <div
             key={title}
-            className="rounded-2xl border border-line bg-surface p-5"
+            className={cn(
+              "relative overflow-hidden rounded-[10px] border border-line bg-surface p-6 shadow-[var(--shadow-soft)] md:p-8",
+              wide && "md:col-span-2 md:min-h-[220px]",
+            )}
+            style={{ animationDelay: `${60 + i * 50}ms` }}
           >
-            <div className="flex items-center gap-2">
-              <span className={`size-2 rounded-full ${color}`} />
-              <span className="inline-flex size-8 items-center justify-center rounded-lg border border-line bg-canvas">
-                <Icon weight="bold" className="size-4" />
+            <div
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80",
+                tint,
+              )}
+            />
+            <div className="relative flex items-start gap-4">
+              <span
+                className={cn(
+                  "inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-canvas",
+                )}
+              >
+                <Icon weight="bold" className="size-4 text-ink" />
               </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`size-1.5 rounded-full ${color}`} />
+                  <p className="font-display text-xl tracking-[-0.03em] text-ink">
+                    {title}
+                  </p>
+                </div>
+                <p className="mt-1 text-xs text-ink-faint">{subtitle}</p>
+                <p className="mt-3 max-w-[44ch] text-sm leading-relaxed text-ink-muted">
+                  {body}
+                </p>
+              </div>
             </div>
-            <p className="mt-4 font-display text-lg tracking-[-0.03em]">
-              {title}
-            </p>
-            <p className="font-mono text-[11px] text-ink-faint">{subtitle}</p>
-            <p className="mt-2 text-sm leading-relaxed text-ink-muted">{body}</p>
           </div>
         ))}
       </div>

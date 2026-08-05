@@ -9,14 +9,22 @@ export {
   slugifyName,
   orgNameSchema,
   workspaceNameSchema,
+  teamNameSchema,
   optionalSlugSchema,
   inviteEmailSchema,
   createOrganizationSchema,
   createWorkspaceSchema,
+  createTeamSchema,
   updateOrganizationSchema,
   updateWorkspaceSchema,
+  updateTeamSchema,
+  createTeamOwnershipChangeSchema,
+  respondTeamOwnershipChangeSchema,
+  teamOwnershipChangeTypeSchema,
   type CreateOrganizationInput,
   type CreateWorkspaceInput,
+  type CreateTeamInput,
+  type CreateTeamOwnershipChangeInput,
 } from "./tenancy";
 
 export {

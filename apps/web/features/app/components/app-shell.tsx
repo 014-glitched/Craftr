@@ -12,6 +12,7 @@ import {
   LaneNavPlaceholder,
   HomeNavLink,
 } from "@/features/workspaces/components/workspace-switcher";
+import { TeamsNav } from "@/features/teams/components/teams-nav";
 import { useTenancyStore } from "@/features/tenancy/store/workspace-context";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -56,13 +57,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     .join("");
 
   const isOnboarding = pathname.startsWith("/app/onboarding");
-  const homeHref =
-    navOrgSlug && !isOnboarding
-      ? `/app/${navOrgSlug}/${useTenancyStore.getState().activeWorkspaceSlug ?? "general"}`
-      : "/app";
-  const homeActive = Boolean(
-    pathname.match(/^\/app\/[^/]+\/[^/]+$/) && !pathname.endsWith("/settings"),
-  );
+  const homeHref = "/app";
+  const homeActive = pathname === "/app";
 
   return (
     <div className="flex min-h-screen bg-canvas text-ink">
@@ -94,6 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {navOrgSlug ? (
               <>
                 <WorkspaceSwitcher orgSlug={navOrgSlug} />
+                <TeamsNav orgSlug={navOrgSlug} />
                 <OrgNav orgSlug={navOrgSlug} />
               </>
             ) : null}
@@ -140,7 +137,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </header>
         ) : null}
-        <main className="flex-1 p-6 md:p-10">{children}</main>
+        <main className="min-w-0 flex-1 p-6 md:p-10">{children}</main>
       </div>
     </div>
   );

@@ -6,8 +6,10 @@ import { OrgMemberGuard } from "../../common/tenancy/org-member.guard";
 import { WorkspaceMemberGuard } from "../../common/tenancy/workspace-member.guard";
 import { WorkspacesService } from "./workspaces.service";
 import {
+  ArchiveWorkspaceInput,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
+  WorkspaceMemberModel,
   WorkspaceModel,
 } from "./workspaces.types";
 
@@ -20,8 +22,14 @@ export class WorkspacesResolver {
   async myWorkspaces(
     @CurrentUser() user: AuthUser,
     @Args("organizationId", { type: () => String }) organizationId: string,
+    @Args("includeArchived", { type: () => Boolean, nullable: true })
+    includeArchived?: boolean,
   ) {
-    return this.workspacesService.listForUser(user.id, organizationId);
+    return this.workspacesService.listForUser(
+      user.id,
+      organizationId,
+      includeArchived ?? false,
+    );
   }
 
   @Query(() => WorkspaceModel)
@@ -32,6 +40,15 @@ export class WorkspacesResolver {
     @Args("workspaceSlug") workspaceSlug: string,
   ) {
     return this.workspacesService.getBySlugs(user.id, orgSlug, workspaceSlug);
+  }
+
+  @Query(() => [WorkspaceMemberModel])
+  @UseGuards(GqlAuthGuard, WorkspaceMemberGuard)
+  async workspaceMembers(
+    @CurrentUser() user: AuthUser,
+    @Args("workspaceId", { type: () => String }) workspaceId: string,
+  ) {
+    return this.workspacesService.listMembers(user.id, workspaceId);
   }
 
   @Mutation(() => WorkspaceModel)
@@ -64,11 +81,44 @@ export class WorkspacesResolver {
       input.workspaceId,
       { name: input.name, slug: input.slug },
     );
-    const full = await this.workspacesService.getBySlugs(
+    return this.workspacesService.getBySlugs(
       user.id,
       workspace.orgSlug,
       workspace.slug,
     );
-    return full;
+  }
+
+  @Mutation(() => WorkspaceModel)
+  @UseGuards(GqlAuthGuard)
+  async archiveWorkspace(
+    @CurrentUser() user: AuthUser,
+    @Args("input") input: ArchiveWorkspaceInput,
+  ) {
+    const workspace = await this.workspacesService.archive(
+      user.id,
+      input.workspaceId,
+    );
+    return this.workspacesService.getBySlugs(
+      user.id,
+      workspace.orgSlug,
+      workspace.slug,
+    );
+  }
+
+  @Mutation(() => WorkspaceModel)
+  @UseGuards(GqlAuthGuard)
+  async restoreWorkspace(
+    @CurrentUser() user: AuthUser,
+    @Args("input") input: ArchiveWorkspaceInput,
+  ) {
+    const workspace = await this.workspacesService.restore(
+      user.id,
+      input.workspaceId,
+    );
+    return this.workspacesService.getBySlugs(
+      user.id,
+      workspace.orgSlug,
+      workspace.slug,
+    );
   }
 }

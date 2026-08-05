@@ -13,7 +13,7 @@ const BYPASS_PREFIXES = ["/invite"];
 export function TenancyGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { activeOrgSlug, activeWorkspaceSlug, setActiveOrg } = useTenancyStore();
+  const { activeOrgSlug, setActiveOrg } = useTenancyStore();
 
   const { data, loading } = useQuery<MyOrganizationsQuery>(MY_ORGANIZATIONS, {
     fetchPolicy: "cache-and-network",
@@ -36,22 +36,18 @@ export function TenancyGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Already has orgs — leave onboarding
+    // Already has orgs — leave onboarding for home
     if (isOnboarding) {
-      const org =
-        orgs.find((o) => o.slug === activeOrgSlug) ?? orgs[0];
+      const org = orgs.find((o) => o.slug === activeOrgSlug) ?? orgs[0];
       setActiveOrg({ id: org.id, slug: org.slug });
-      const wsSlug = activeWorkspaceSlug ?? "general";
-      router.replace(`/app/${org.slug}/${wsSlug}`);
+      router.replace("/app");
       return;
     }
 
+    // `/app` is the real org home — only ensure active org is set
     if (pathname === "/app") {
-      const org =
-        orgs.find((o) => o.slug === activeOrgSlug) ?? orgs[0];
+      const org = orgs.find((o) => o.slug === activeOrgSlug) ?? orgs[0];
       setActiveOrg({ id: org.id, slug: org.slug });
-      const wsSlug = activeWorkspaceSlug ?? "general";
-      router.replace(`/app/${org.slug}/${wsSlug}`);
     }
   }, [
     isInitialLoading,
@@ -62,7 +58,6 @@ export function TenancyGate({ children }: { children: React.ReactNode }) {
     isBypass,
     isOnboarding,
     activeOrgSlug,
-    activeWorkspaceSlug,
     setActiveOrg,
   ]);
 

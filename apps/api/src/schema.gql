@@ -7,6 +7,58 @@ type AcceptInvitationPayload {
   workspace: WorkspaceRefModel
 }
 
+input AddTeamMemberInput {
+  role: MemberRole! = MEMBER
+  teamId: ID!
+  userId: ID!
+}
+
+input ArchiveWorkspaceInput {
+  workspaceId: ID!
+}
+
+"""Append-only audit event kinds for tenancy and teams"""
+enum AuditAction {
+  INVITATION_CREATED
+  ORG_MEMBER_REMOVED
+  OWNERSHIP_ACCEPTED
+  OWNERSHIP_CANCELLED
+  OWNERSHIP_DECLINED
+  OWNERSHIP_OFFERED
+  OWNERSHIP_REQUESTED
+  TEAM_CREATED
+  TEAM_MEMBER_ADDED
+  TEAM_MEMBER_REMOVED
+  TEAM_UPDATED
+  WORKSPACE_ARCHIVED
+  WORKSPACE_CREATED
+  WORKSPACE_RESTORED
+  WORKSPACE_UPDATED
+}
+
+type AuditActorModel {
+  email: String!
+  id: ID!
+  name: String!
+}
+
+type AuditLogModel {
+  action: AuditAction!
+  actor: AuditActorModel!
+  createdAt: DateTime!
+  entityId: ID
+  entityType: String!
+  id: ID!
+  metadata: String
+  organizationId: ID!
+  summary: String!
+  workspaceId: ID
+}
+
+input CancelTeamOwnershipChangeInput {
+  changeId: ID!
+}
+
 input CreateInvitationInput {
   email: String!
   organizationId: ID!
@@ -20,8 +72,20 @@ input CreateOrganizationInput {
 }
 
 type CreateOrganizationPayload {
-  defaultWorkspace: WorkspaceRefModel!
   organization: OrganizationModel!
+}
+
+input CreateTeamInput {
+  name: String!
+  slug: String
+  workspaceId: ID!
+}
+
+input CreateTeamOwnershipChangeInput {
+  counterpartyUserId: ID
+  message: String
+  teamId: ID!
+  type: TeamOwnershipChangeType!
 }
 
 input CreateWorkspaceInput {
@@ -53,7 +117,7 @@ type InvitationPreviewModel {
   workspaceName: String
 }
 
-"""Organization and workspace membership role"""
+"""Organization, workspace, and team membership role"""
 enum MemberRole {
   ADMIN
   GUEST
@@ -63,11 +127,20 @@ enum MemberRole {
 
 type Mutation {
   acceptInvitation(token: String!): AcceptInvitationPayload!
+  addTeamMember(input: AddTeamMemberInput!): TeamMemberModel!
+  archiveWorkspace(input: ArchiveWorkspaceInput!): WorkspaceModel!
+  cancelTeamOwnershipChange(input: CancelTeamOwnershipChangeInput!): TeamOwnershipChangeModel!
   createInvitation(input: CreateInvitationInput!): InvitationModel!
   createOrganization(input: CreateOrganizationInput!): CreateOrganizationPayload!
+  createTeam(input: CreateTeamInput!): TeamModel!
+  createTeamOwnershipChange(input: CreateTeamOwnershipChangeInput!): TeamOwnershipChangeModel!
   createWorkspace(input: CreateWorkspaceInput!): WorkspaceModel!
   removeOrganizationMember(input: RemoveOrganizationMemberInput!): Boolean!
+  removeTeamMember(input: RemoveTeamMemberInput!): Boolean!
+  respondTeamOwnershipChange(input: RespondTeamOwnershipChangeInput!): TeamOwnershipChangeModel!
+  restoreWorkspace(input: ArchiveWorkspaceInput!): WorkspaceModel!
   updateOrganization(input: UpdateOrganizationInput!): OrganizationModel!
+  updateTeam(input: UpdateTeamInput!): TeamModel!
   updateWorkspace(input: UpdateWorkspaceInput!): WorkspaceModel!
 }
 
@@ -100,10 +173,19 @@ type Query {
   """Returns the currently authenticated user"""
   me: UserModel!
   myOrganizations: [OrganizationModel!]!
-  myWorkspaces(organizationId: String!): [WorkspaceModel!]!
+  myTeamOwnershipInbox: [TeamOwnershipChangeModel!]!
+  myTeams(workspaceId: String!): [TeamModel!]!
+  myWorkspaces(includeArchived: Boolean, organizationId: String!): [WorkspaceModel!]!
   organization(slug: String!): OrganizationModel!
+  organizationAuditLogs(limit: Int = 50, organizationId: String!): [AuditLogModel!]!
   organizationMembers(organizationId: String!): [OrganizationMemberModel!]!
+  team(orgSlug: String!, teamSlug: String!, workspaceSlug: String!): TeamModel!
+  teamMembers(teamId: String!): [TeamMemberModel!]!
+  teamOwnershipChanges(teamId: String!): [TeamOwnershipChangeModel!]!
   workspace(orgSlug: String!, workspaceSlug: String!): WorkspaceModel!
+  workspaceAuditLogs(limit: Int = 50, workspaceId: String!): [AuditLogModel!]!
+  workspaceMembers(workspaceId: String!): [WorkspaceMemberModel!]!
+  workspaceTeams(workspaceId: String!): [TeamModel!]!
 }
 
 input RemoveOrganizationMemberInput {
@@ -111,10 +193,83 @@ input RemoveOrganizationMemberInput {
   userId: ID!
 }
 
+input RemoveTeamMemberInput {
+  teamId: ID!
+  userId: ID!
+}
+
+input RespondTeamOwnershipChangeInput {
+  accept: Boolean!
+  changeId: ID!
+}
+
+type TeamMemberModel {
+  id: ID!
+  joinedAt: DateTime!
+  role: MemberRole!
+  user: TeamMemberUserModel!
+}
+
+type TeamMemberUserModel {
+  email: String!
+  id: ID!
+  image: String
+  name: String!
+}
+
+type TeamModel {
+  createdAt: DateTime!
+  id: ID!
+  myRole: MemberRole
+  name: String!
+  orgSlug: String!
+  slug: String!
+  updatedAt: DateTime!
+  workspaceId: ID!
+  workspaceSlug: String!
+}
+
+type TeamOwnershipChangeModel {
+  counterparty: TeamMemberUserModel
+  createdAt: DateTime!
+  expiresAt: DateTime!
+  id: ID!
+  initiator: TeamMemberUserModel!
+  message: String
+  resolvedAt: DateTime
+  responder: TeamMemberUserModel
+  status: TeamOwnershipChangeStatus!
+  teamId: ID!
+  teamName: String!
+  type: TeamOwnershipChangeType!
+}
+
+enum TeamOwnershipChangeStatus {
+  ACCEPTED
+  CANCELLED
+  DECLINED
+  PENDING
+}
+
+"""
+TRANSFER demotes the offering owner to ADMIN; CO_OWNER keeps both; REQUEST asks owners to promote the requester
+"""
+enum TeamOwnershipChangeType {
+  CO_OWNER
+  REQUEST
+  TRANSFER
+}
+
 input UpdateOrganizationInput {
   name: String
   organizationId: ID!
   slug: String
+}
+
+input UpdateTeamInput {
+  name: String
+  slug: String
+  teamId: ID!
 }
 
 input UpdateWorkspaceInput {
@@ -131,7 +286,22 @@ type UserModel {
   name: String!
 }
 
+type WorkspaceMemberModel {
+  id: ID!
+  joinedAt: DateTime!
+  role: MemberRole!
+  user: WorkspaceMemberUserModel!
+}
+
+type WorkspaceMemberUserModel {
+  email: String!
+  id: ID!
+  image: String
+  name: String!
+}
+
 type WorkspaceModel {
+  archivedAt: DateTime
   createdAt: DateTime!
   id: ID!
   myRole: MemberRole

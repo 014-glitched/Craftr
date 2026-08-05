@@ -22,7 +22,16 @@ export class WorkspaceMemberGuard implements CanActivate {
       orgSlug?: string;
       workspaceSlug?: string;
       workspaceId?: string;
+      input?: {
+        orgSlug?: string;
+        workspaceSlug?: string;
+        workspaceId?: string;
+      };
     };
+
+    const workspaceId = args.workspaceId ?? args.input?.workspaceId;
+    const orgSlug = args.orgSlug ?? args.input?.orgSlug;
+    const workspaceSlug = args.workspaceSlug ?? args.input?.workspaceSlug;
 
     let workspace:
       | {
@@ -33,14 +42,14 @@ export class WorkspaceMemberGuard implements CanActivate {
         }
       | null = null;
 
-    if (args.workspaceId) {
+    if (workspaceId) {
       workspace = await this.prisma.workspace.findUnique({
-        where: { id: args.workspaceId },
+        where: { id: workspaceId },
         include: { organization: { select: { slug: true } } },
       });
-    } else if (args.orgSlug && args.workspaceSlug) {
+    } else if (orgSlug && workspaceSlug) {
       const org = await this.prisma.organization.findUnique({
-        where: { slug: args.orgSlug },
+        where: { slug: orgSlug },
       });
       if (!org) {
         throw new ForbiddenException("Organization not found");
@@ -49,7 +58,7 @@ export class WorkspaceMemberGuard implements CanActivate {
         where: {
           organizationId_slug: {
             organizationId: org.id,
-            slug: args.workspaceSlug,
+            slug: workspaceSlug,
           },
         },
         include: { organization: { select: { slug: true } } },

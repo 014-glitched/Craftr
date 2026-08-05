@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import {
@@ -17,16 +19,19 @@ import {
   updateOrganizationSchema,
 } from "@craftr/validation";
 import { parseInput } from "../../common/validation/parse-input";
-import {
-  uniqueOrgSlug,
-  uniqueWorkspaceSlug,
-} from "../../common/tenancy/slug.util";
-
-const DEFAULT_WORKSPACE_NAME = "General";
+import { uniqueOrgSlug } from "../../common/tenancy/slug.util";
+import { TeamsService } from "../teams/teams.service";
+import { AuditService } from "../audit/audit.service";
+import { AuditAction } from "../audit/audit.types";
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => TeamsService))
+    private readonly teamsService: TeamsService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async listForUser(userId: string) {
     const memberships = await this.prisma.organizationMember.findMany({
@@ -70,34 +75,7 @@ export class OrganizationsService {
         },
       });
 
-      const wsSlug = await uniqueWorkspaceSlug(
-        slugifyName(DEFAULT_WORKSPACE_NAME),
-        org.id,
-        async (organizationId, s) => {
-          const existing = await tx.workspace.findUnique({
-            where: { organizationId_slug: { organizationId, slug: s } },
-          });
-          return Boolean(existing);
-        },
-      );
-
-      const workspace = await tx.workspace.create({
-        data: {
-          organizationId: org.id,
-          name: DEFAULT_WORKSPACE_NAME,
-          slug: wsSlug,
-        },
-      });
-
-      await tx.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId,
-          role: "OWNER",
-        },
-      });
-
-      return { organization: org, defaultWorkspace: workspace };
+      return { organization: org };
     });
   }
 
@@ -168,10 +146,21 @@ export class OrganizationsService {
       where: {
         organizationId_userId: { organizationId, userId: targetUserId },
       },
+      include: {
+        user: { select: { email: true, name: true } },
+      },
     });
     if (!membership) {
       throw new NotFoundException("Member not found");
     }
+
+    // Sole-owner team guard + team membership cleanup (lives in TeamsService)
+    await this.teamsService.purgeUserTeamsInOrganization(
+      targetUserId,
+      organizationId,
+    );
+
+    const targetLabel = membership.user.email || membership.user.name || targetUserId;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.organizationMember.delete({ where: { id: membership.id } });
@@ -180,12 +169,26 @@ export class OrganizationsService {
           where: { organizationId },
           select: { id: true },
         })
-      ).map((w) => w.id);
+      ).map((workspace) => workspace.id);
       if (workspaceIds.length > 0) {
         await tx.workspaceMember.deleteMany({
           where: { userId: targetUserId, workspaceId: { in: workspaceIds } },
         });
       }
+
+      await this.auditService.record(
+        {
+          organizationId,
+          workspaceId: null,
+          actorUserId: userId,
+          action: AuditAction.ORG_MEMBER_REMOVED,
+          entityType: "OrganizationMember",
+          entityId: membership.id,
+          summary: `Removed organization member ${targetLabel}`,
+          metadata: { targetUserId, email: membership.user.email },
+        },
+        tx,
+      );
     });
 
     return true;

@@ -14,6 +14,37 @@ enum MemberRole {
   GUEST
 }
 
+enum TeamOwnershipChangeType {
+  TRANSFER
+  CO_OWNER
+  REQUEST
+}
+
+enum TeamOwnershipChangeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum AuditAction {
+  TEAM_CREATED
+  TEAM_UPDATED
+  TEAM_MEMBER_ADDED
+  TEAM_MEMBER_REMOVED
+  OWNERSHIP_OFFERED
+  OWNERSHIP_REQUESTED
+  OWNERSHIP_ACCEPTED
+  OWNERSHIP_DECLINED
+  OWNERSHIP_CANCELLED
+  WORKSPACE_CREATED
+  WORKSPACE_UPDATED
+  WORKSPACE_ARCHIVED
+  WORKSPACE_RESTORED
+  INVITATION_CREATED
+  ORG_MEMBER_REMOVED
+}
+
 // Better Auth core tables — keep field names aligned with Better Auth Prisma adapter.
 
 model User {
@@ -28,7 +59,12 @@ model User {
   accounts             Account[]
   organizationMembers  OrganizationMember[]
   workspaceMembers     WorkspaceMember[]
+  teamMembers          TeamMember[]
   invitationsSent      Invitation[]         @relation("InvitedBy")
+  ownershipChangesInitiated  TeamOwnershipChange[] @relation("OwnershipInitiator")
+  ownershipChangesReceived   TeamOwnershipChange[] @relation("OwnershipCounterparty")
+  ownershipChangesResponded  TeamOwnershipChange[] @relation("OwnershipResponder")
+  auditLogs                  AuditLog[]
 
   @@map("user")
 }
@@ -86,6 +122,7 @@ model Organization {
   members   OrganizationMember[]
   workspaces Workspace[]
   invitations Invitation[]
+  auditLogs AuditLog[]
 
   @@map("organization")
 }
@@ -110,14 +147,18 @@ model Workspace {
   organizationId String
   name           String
   slug           String
+  archivedAt     DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   members        WorkspaceMember[]
+  teams          Team[]
   invitations    Invitation[]
+  auditLogs      AuditLog[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
+  @@index([organizationId, archivedAt])
   @@map("workspace")
 }
 
@@ -134,6 +175,62 @@ model WorkspaceMember {
   @@unique([workspaceId, userId])
   @@index([userId])
   @@map("workspace_member")
+}
+
+model Team {
+  id          String                @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  ownershipChanges TeamOwnershipChange[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
+  @@map("team")
+}
+
+model TeamMember {
+  id        String     @id @default(cuid())
+  teamId    String
+  userId    String
+  role      MemberRole @default(MEMBER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_member")
+}
+
+/// Offer (TRANSFER / CO_OWNER) or REQUEST to become a team OWNER. Requires acceptance.
+model TeamOwnershipChange {
+  id                 String                     @id @default(cuid())
+  teamId             String
+  type               TeamOwnershipChangeType
+  status             TeamOwnershipChangeStatus  @default(PENDING)
+  initiatorUserId    String
+  counterpartyUserId String?
+  responderUserId    String?
+  message            String?
+  expiresAt          DateTime
+  resolvedAt         DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  team               Team                       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  initiator          User                       @relation("OwnershipInitiator", fields: [initiatorUserId], references: [id], onDelete: Cascade)
+  counterparty       User?                      @relation("OwnershipCounterparty", fields: [counterpartyUserId], references: [id], onDelete: Cascade)
+  responder          User?                      @relation("OwnershipResponder", fields: [responderUserId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, status])
+  @@index([counterpartyUserId, status])
+  @@index([initiatorUserId, status])
+  @@map("team_ownership_change")
 }
 
 model Invitation {
@@ -154,4 +251,24 @@ model Invitation {
 
   @@index([email, organizationId])
   @@map("invitation")
+}
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  organizationId String
+  workspaceId    String?
+  actorUserId    String
+  action         AuditAction
+  entityType     String
+  entityId       String?
+  summary        String
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace      Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  actor          User         @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([workspaceId, createdAt])
+  @@map("audit_log")
 }

@@ -21,6 +21,9 @@ export class WorkspaceModel {
   @Field(() => MemberRole, { nullable: true })
   myRole?: MemberRole;
 
+  @Field(() => Date, { nullable: true })
+  archivedAt?: Date | null;
+
   @Field()
   createdAt!: Date;
 
@@ -50,4 +53,40 @@ export class UpdateWorkspaceInput {
 
   @Field({ nullable: true })
   slug?: string;
+}
+
+@InputType()
+export class ArchiveWorkspaceInput {
+  @Field(() => ID)
+  workspaceId!: string;
+}
+
+@ObjectType()
+export class WorkspaceMemberUserModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  name!: string;
+
+  @Field()
+  email!: string;
+
+  @Field(() => String, { nullable: true })
+  image?: string | null;
+}
+
+@ObjectType()
+export class WorkspaceMemberModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => MemberRole)
+  role!: MemberRole;
+
+  @Field()
+  joinedAt!: Date;
+
+  @Field(() => WorkspaceMemberUserModel)
+  user!: WorkspaceMemberUserModel;
 }

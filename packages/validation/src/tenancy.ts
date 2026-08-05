@@ -23,6 +23,13 @@ export const workspaceNameSchema = z
   .min(2, "Name must be at least 2 characters.")
   .max(80, "Name must be 80 characters or fewer.");
 
+export const teamNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Team name is required.")
+  .min(2, "Name must be at least 2 characters.")
+  .max(80, "Name must be 80 characters or fewer.");
+
 const slugValueSchema = z
   .string()
   .trim()
@@ -78,5 +85,61 @@ export const updateWorkspaceSchema = z
     message: "At least one field is required.",
   });
 
+export const createTeamSchema = z.object({
+  name: teamNameSchema,
+  slug: optionalSlugSchema,
+});
+
+export const updateTeamSchema = z
+  .object({
+    name: teamNameSchema.optional(),
+    slug: slugValueSchema.optional(),
+  })
+  .refine((data) => data.name !== undefined || data.slug !== undefined, {
+    message: "At least one field is required.",
+  });
+
+export const teamOwnershipChangeTypeSchema = z.enum([
+  "TRANSFER",
+  "CO_OWNER",
+  "REQUEST",
+]);
+
+export const createTeamOwnershipChangeSchema = z
+  .object({
+    teamId: z.string().min(1),
+    type: teamOwnershipChangeTypeSchema,
+    counterpartyUserId: z.string().min(1).optional(),
+    message: z.string().trim().max(280).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "REQUEST") {
+      if (data.counterpartyUserId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Requests do not take a counterparty.",
+          path: ["counterpartyUserId"],
+        });
+      }
+      return;
+    }
+    if (!data.counterpartyUserId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select a team member to offer ownership to.",
+        path: ["counterpartyUserId"],
+      });
+    }
+  });
+
+export const respondTeamOwnershipChangeSchema = z.object({
+  changeId: z.string().min(1),
+  accept: z.boolean(),
+});
+
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
+export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+export type CreateTeamOwnershipChangeInput = z.infer<
+  typeof createTeamOwnershipChangeSchema
+>;

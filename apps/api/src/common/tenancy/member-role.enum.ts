@@ -9,7 +9,7 @@ export enum MemberRole {
 
 registerEnumType(MemberRole, {
   name: "MemberRole",
-  description: "Organization and workspace membership role",
+  description: "Organization, workspace, and team membership role",
 });
 
 const ROLE_RANK: Record<MemberRole, number> = {
