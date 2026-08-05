@@ -12,10 +12,18 @@ export type WorkspaceMembershipContext = {
   role: MemberRole;
 };
 
+export type TeamMembershipContext = {
+  teamId: string;
+  workspaceId: string;
+  organizationId: string;
+  role: MemberRole;
+};
+
 export type GqlContext = {
   req: Request;
   res: Response;
   user?: AuthUser;
   orgMembership?: OrgMembershipContext;
   workspaceMembership?: WorkspaceMembershipContext;
+  teamMembership?: TeamMembershipContext;
 };

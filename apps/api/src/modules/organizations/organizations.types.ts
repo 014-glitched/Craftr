@@ -71,9 +71,6 @@ export class WorkspaceRefModel {
 export class CreateOrganizationPayload {
   @Field(() => OrganizationModel)
   organization!: OrganizationModel;
-
-  @Field(() => WorkspaceRefModel)
-  defaultWorkspace!: WorkspaceRefModel;
 }
 
 @ObjectType()

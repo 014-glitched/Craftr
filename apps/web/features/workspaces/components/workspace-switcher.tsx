@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@apollo/client/react";
 import {
   GearSix,
+  Scroll,
   SquaresFour,
 } from "@phosphor-icons/react";
 import {
@@ -17,6 +18,13 @@ import { useTenancyStore } from "@/features/tenancy/store/workspace-context";
 import { cn } from "@/lib/utils";
 import { SidebarAccordion } from "@/features/app/components/sidebar-accordion";
 
+const RESERVED_ORG_SEGMENTS = new Set([
+  "settings",
+  "teams",
+  "audit",
+  "workspaces",
+]);
+
 export function WorkspaceSwitcher({ orgSlug }: { orgSlug: string }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -26,19 +34,25 @@ export function WorkspaceSwitcher({ orgSlug }: { orgSlug: string }) {
   const org = orgData?.myOrganizations?.find((o) => o.slug === orgSlug);
 
   const { data: wsData } = useQuery<MyWorkspacesQuery>(MY_WORKSPACES, {
-    variables: { organizationId: org?.id ?? "" },
+    variables: { organizationId: org?.id ?? "", includeArchived: false },
     skip: !org?.id,
   });
 
-  const workspaces = wsData?.myWorkspaces ?? [];
+  const workspaces = (wsData?.myWorkspaces ?? []).filter((w) => !w.archivedAt);
+  const workspacesHref = `/app/${orgSlug}/workspaces`;
+  const onWorkspacesPage = pathname === workspacesHref;
+  const pathSeg = pathname.match(new RegExp(`^/app/${orgSlug}/([^/]+)$`))?.[1];
   const onWorkspaceRoute = Boolean(
-    pathname.match(new RegExp(`^/app/${orgSlug}/[^/]+$`)),
+    pathSeg && !RESERVED_ORG_SEGMENTS.has(pathSeg),
   );
 
   if (!org) return null;
 
   return (
-    <SidebarAccordion title="Workspaces" defaultOpen={onWorkspaceRoute || workspaces.length > 0}>
+    <SidebarAccordion
+      title="Workspaces"
+      defaultOpen={onWorkspaceRoute || onWorkspacesPage || workspaces.length > 0}
+    >
       <ul className="space-y-0.5">
         {workspaces.map((ws) => {
           const active =
@@ -71,8 +85,34 @@ export function WorkspaceSwitcher({ orgSlug }: { orgSlug: string }) {
           );
         })}
         {workspaces.length === 0 ? (
-          <li className="px-2.5 py-2 text-xs text-ink-faint">No workspaces yet</li>
-        ) : null}
+          <li>
+            <Link
+              href={workspacesHref}
+              className={cn(
+                "block rounded-lg px-2.5 py-2 text-sm transition-colors",
+                onWorkspacesPage
+                  ? "bg-brand-soft font-medium text-ink"
+                  : "text-ink-muted hover:bg-canvas hover:text-ink",
+              )}
+            >
+              How workspaces work
+            </Link>
+          </li>
+        ) : (
+          <li>
+            <Link
+              href={workspacesHref}
+              className={cn(
+                "block rounded-lg px-2.5 py-2 text-xs transition-colors",
+                onWorkspacesPage
+                  ? "font-medium text-ink"
+                  : "text-ink-faint hover:text-ink-muted",
+              )}
+            >
+              Manage workspaces
+            </Link>
+          </li>
+        )}
       </ul>
     </SidebarAccordion>
   );
@@ -81,10 +121,13 @@ export function WorkspaceSwitcher({ orgSlug }: { orgSlug: string }) {
 export function OrgNav({ orgSlug }: { orgSlug: string }) {
   const pathname = usePathname();
   const settingsHref = `/app/${orgSlug}/settings`;
+  const auditHref = `/app/${orgSlug}/audit`;
   const settingsActive = pathname === settingsHref;
+  const auditActive = pathname === auditHref;
+  const orgSectionOpen = settingsActive || auditActive;
 
   return (
-    <SidebarAccordion title="Organization" defaultOpen={settingsActive}>
+    <SidebarAccordion title="Organization" defaultOpen={orgSectionOpen}>
       <Link
         href={settingsHref}
         className={cn(
@@ -96,6 +139,18 @@ export function OrgNav({ orgSlug }: { orgSlug: string }) {
       >
         <GearSix weight="bold" className="size-4 shrink-0 text-brand" />
         <span>Settings & members</span>
+      </Link>
+      <Link
+        href={auditHref}
+        className={cn(
+          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+          auditActive
+            ? "bg-brand-soft font-medium text-ink"
+            : "text-ink-muted hover:bg-canvas hover:text-ink",
+        )}
+      >
+        <Scroll weight="bold" className="size-4 shrink-0 text-brand" />
+        <span>Audit</span>
       </Link>
     </SidebarAccordion>
   );
@@ -147,7 +202,7 @@ export function OrgSwitcher() {
         const org = orgs.find((o) => o.slug === e.target.value);
         if (!org) return;
         setActiveOrg({ id: org.id, slug: org.slug });
-        router.push(`/app/${org.slug}/general`);
+        router.push("/app");
       }}
       className="w-full rounded-lg border border-line-strong bg-canvas px-2.5 py-2 text-sm text-ink outline-none focus:border-brand"
     >

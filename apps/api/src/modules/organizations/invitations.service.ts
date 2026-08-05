@@ -15,6 +15,8 @@ import { inviteEmailSchema } from "@craftr/validation";
 import { parseInput } from "../../common/validation/parse-input";
 import { maskEmail } from "../../common/tenancy/slug.util";
 import { OrganizationsService } from "./organizations.service";
+import { AuditService } from "../audit/audit.service";
+import { AuditAction } from "../audit/audit.types";
 
 const INVITE_TTL_DAYS = 7;
 
@@ -23,6 +25,7 @@ export class InvitationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly organizationsService: OrganizationsService,
+    private readonly auditService: AuditService,
   ) {}
 
   async create(
@@ -45,6 +48,9 @@ export class InvitationsService {
         where: { id: workspaceId, organizationId },
       });
       if (!ws) throw new NotFoundException("Workspace not found in organization");
+      if (ws.archivedAt) {
+        throw new BadRequestException("Cannot invite to an archived workspace");
+      }
     }
 
     const token = randomBytes(32).toString("hex");
@@ -61,6 +67,17 @@ export class InvitationsService {
         expiresAt,
         invitedByUserId: userId,
       },
+    });
+
+    await this.auditService.record({
+      organizationId,
+      workspaceId: workspaceId ?? null,
+      actorUserId: userId,
+      action: AuditAction.INVITATION_CREATED,
+      entityType: "Invitation",
+      entityId: invitation.id,
+      summary: `Created invitation for ${normalizedEmail}`,
+      metadata: { email: normalizedEmail, role, workspaceId: workspaceId ?? null },
     });
 
     return invitation;
@@ -151,30 +168,6 @@ export class InvitationsService {
             },
           });
         }
-      } else {
-        const defaultWorkspace = await tx.workspace.findFirst({
-          where: { organizationId: invitation.organizationId },
-          orderBy: { createdAt: "asc" },
-        });
-        if (defaultWorkspace) {
-          const existingWsMember = await tx.workspaceMember.findUnique({
-            where: {
-              workspaceId_userId: {
-                workspaceId: defaultWorkspace.id,
-                userId,
-              },
-            },
-          });
-          if (!existingWsMember) {
-            await tx.workspaceMember.create({
-              data: {
-                workspaceId: defaultWorkspace.id,
-                userId,
-                role: invitation.role,
-              },
-            });
-          }
-        }
       }
 
       await tx.invitation.update({
@@ -182,17 +175,9 @@ export class InvitationsService {
         data: { acceptedAt: new Date() },
       });
 
-      let joinedWorkspace = invitation.workspace;
-      if (!joinedWorkspace) {
-        joinedWorkspace = await tx.workspace.findFirst({
-          where: { organizationId: invitation.organizationId },
-          orderBy: { createdAt: "asc" },
-        });
-      }
-
       return {
         organization: invitation.organization,
-        workspace: joinedWorkspace,
+        workspace: invitation.workspace,
       };
     });
   }

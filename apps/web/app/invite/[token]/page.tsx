@@ -22,6 +22,7 @@ export default function AcceptInvitePage() {
   const params = useParams<{ token: string }>();
   const token = params.token;
   const { data: session, isPending: sessionPending } = useSession();
+  const setActiveOrg = useTenancyStore((s) => s.setActiveOrg);
   const setActiveWorkspace = useTenancyStore((s) => s.setActiveWorkspace);
   const clearTenancy = useTenancyStore((s) => s.clear);
   const [acceptError, setAcceptError] = useState<string | null>(null);
@@ -84,7 +85,6 @@ export default function AcceptInvitePage() {
 
       const ws = payload.workspace;
       const orgSlug = payload.organization.slug;
-      const wsSlug = ws?.slug ?? "general";
 
       if (ws) {
         setActiveWorkspace({
@@ -93,19 +93,20 @@ export default function AcceptInvitePage() {
           orgSlug: ws.orgSlug,
           organizationId: payload.organization.id,
         });
+        setSuccessMessage(
+          `Joined ${payload.organization.name}. Opening workspace…`,
+        );
+        router.replace(`/app/${orgSlug}/${ws.slug}`);
       } else {
-        setActiveWorkspace({
-          id: "",
-          slug: wsSlug,
-          orgSlug,
-          organizationId: payload.organization.id,
+        setActiveOrg({
+          id: payload.organization.id,
+          slug: orgSlug,
         });
+        setSuccessMessage(
+          `Joined ${payload.organization.name}. Opening home…`,
+        );
+        router.replace("/app");
       }
-
-      setSuccessMessage(
-        `Joined ${payload.organization.name}. Opening workspace…`,
-      );
-      router.replace(`/app/${orgSlug}/${wsSlug}`);
     } catch (err) {
       setAcceptError(
         apolloErrorMessage(err, "Unable to accept this invitation."),

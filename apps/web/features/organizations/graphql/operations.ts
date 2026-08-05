@@ -12,14 +12,18 @@ export const MY_ORGANIZATIONS = gql`
 `;
 
 export const MY_WORKSPACES = gql`
-  query MyWorkspaces($organizationId: String!) {
-    myWorkspaces(organizationId: $organizationId) {
+  query MyWorkspaces($organizationId: String!, $includeArchived: Boolean) {
+    myWorkspaces(
+      organizationId: $organizationId
+      includeArchived: $includeArchived
+    ) {
       id
       name
       slug
       orgSlug
       organizationId
       myRole
+      archivedAt
     }
   }
 `;
@@ -33,6 +37,7 @@ export const WORKSPACE = gql`
       orgSlug
       organizationId
       myRole
+      archivedAt
     }
   }
 `;
@@ -76,12 +81,6 @@ export const CREATE_ORGANIZATION = gql`
         slug
         myRole
       }
-      defaultWorkspace {
-        id
-        name
-        slug
-        orgSlug
-      }
     }
   }
 `;
@@ -95,6 +94,35 @@ export const CREATE_WORKSPACE = gql`
       orgSlug
       organizationId
       myRole
+      archivedAt
+    }
+  }
+`;
+
+export const ARCHIVE_WORKSPACE = gql`
+  mutation ArchiveWorkspace($input: ArchiveWorkspaceInput!) {
+    archiveWorkspace(input: $input) {
+      id
+      name
+      slug
+      orgSlug
+      organizationId
+      myRole
+      archivedAt
+    }
+  }
+`;
+
+export const RESTORE_WORKSPACE = gql`
+  mutation RestoreWorkspace($input: ArchiveWorkspaceInput!) {
+    restoreWorkspace(input: $input) {
+      id
+      name
+      slug
+      orgSlug
+      organizationId
+      myRole
+      archivedAt
     }
   }
 `;
@@ -150,6 +178,7 @@ export type WorkspaceSummary = {
   orgSlug: string;
   organizationId: string;
   myRole?: string;
+  archivedAt?: string | null;
 };
 
 export type MyOrganizationsQuery = {
@@ -193,12 +222,6 @@ export type InvitationPreviewQuery = {
 export type CreateOrganizationMutation = {
   createOrganization: {
     organization: OrganizationSummary;
-    defaultWorkspace: {
-      id: string;
-      name: string;
-      slug: string;
-      orgSlug: string;
-    };
   };
 };
 

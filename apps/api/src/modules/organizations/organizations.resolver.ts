@@ -71,12 +71,6 @@ export class OrganizationsResolver {
         ...result.organization,
         myRole: MemberRole.OWNER,
       },
-      defaultWorkspace: {
-        id: result.defaultWorkspace.id,
-        name: result.defaultWorkspace.name,
-        slug: result.defaultWorkspace.slug,
-        orgSlug: result.organization.slug,
-      },
     };
   }
 

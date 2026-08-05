@@ -20,7 +20,7 @@ import {
 
 export function CreateOrgForm() {
   const router = useRouter();
-  const setActiveWorkspace = useTenancyStore((s) => s.setActiveWorkspace);
+  const setActiveOrg = useTenancyStore((s) => s.setActiveOrg);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -82,20 +82,14 @@ export function CreateOrgForm() {
         return;
       }
 
-      setActiveWorkspace({
-        id: payload.defaultWorkspace.id,
-        slug: payload.defaultWorkspace.slug,
-        orgSlug: payload.defaultWorkspace.orgSlug,
-        organizationId: payload.organization.id,
+      setActiveOrg({
+        id: payload.organization.id,
+        slug: payload.organization.slug,
       });
 
-      setSuccessMessage(
-        `Created ${payload.organization.name}. Opening workspace…`,
-      );
+      setSuccessMessage(`Created ${payload.organization.name}. Opening home…`);
 
-      router.replace(
-        `/app/${payload.defaultWorkspace.orgSlug}/${payload.defaultWorkspace.slug}`,
-      );
+      router.replace("/app");
     } catch (error) {
       setFormError(
         apolloErrorMessage(

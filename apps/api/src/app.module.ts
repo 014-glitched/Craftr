@@ -8,6 +8,8 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { HealthModule } from "./modules/health/health.module";
 import { OrganizationsModule } from "./modules/organizations/organizations.module";
 import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
+import { TeamsModule } from "./modules/teams/teams.module";
+import { AuditModule } from "./modules/audit/audit.module";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { TenancyModule } from "./common/tenancy/tenancy.module";
 
@@ -19,6 +21,7 @@ import { TenancyModule } from "./common/tenancy/tenancy.module";
     }),
     PrismaModule,
     TenancyModule,
+    AuditModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), "src/schema.gql"),
@@ -40,6 +43,7 @@ import { TenancyModule } from "./common/tenancy/tenancy.module";
     HealthModule,
     OrganizationsModule,
     WorkspacesModule,
+    TeamsModule,
   ],
 })
 export class AppModule {}
